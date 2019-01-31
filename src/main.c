@@ -1,9 +1,22 @@
+/*
+ * @filename	: main.c
+ * @description	: Configuring LETIMER0 in various sleep modes and blinking LED at
+ * 				  appropriate LED on time.
+ * @author 		: Puneet Bansal
+ * @Reference	: Lecture 4 slides
+ */
+
+
 /* Board headers */
+#include "main.h"
 #include "init_mcu.h"
 #include "init_board.h"
 #include "init_app.h"
 #include "ble-configuration.h"
 #include "board_features.h"
+
+//#define LED_period
+//#define LED_ontime
 
 /* Bluetooth stack headers */
 #include "bg_types.h"
@@ -26,11 +39,13 @@
 #include "em_device.h"
 #include "em_chip.h"
 #include "gpio.h"
+#include "sleep.h"
 #ifndef MAX_CONNECTIONS
 #define MAX_CONNECTIONS 4
 #endif
 
 uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
+
 
 // Gecko configuration parameters (see gecko_configuration.h)
 static const gecko_configuration_t config = {
@@ -50,18 +65,6 @@ static const gecko_configuration_t config = {
 #endif // (HAL_PA_ENABLE) && defined(FEATURE_PA_HIGH_POWER)
 };
 
-static void delayApproxOneSecond(void)
-{
-	/**
-	 * Wait loops are a bad idea in general!  Don't copy this code in future assignments!
-	 * We'll discuss how to do this a better way in the next assignment.
-	 */
-	volatile int i;
-	for (i = 0; i < 3500000; ) {
-		  i=i+1;
-	}
-}
-
 
 int main(void)
 {
@@ -72,22 +75,30 @@ int main(void)
   // Initialize application
   initApp();
 
-  gpioInit();
-
   // Initialize stack
   gecko_init(&config);
 
+  clock_init();
+
+  letimer_init();
+  gpioInit();
+
+
+
   /* Infinite loop */
-  while (1) {
-	  delayApproxOneSecond();
-	  gpioLed0SetOff();
+  if(EM>0 && EM<3) 				//Check if desired energy mode is 1,2
+  SLEEP_SleepBlockBegin(EM+1);
 
-	  delayApproxOneSecond();
-	  gpioLed1SetOff();
 
-	  delayApproxOneSecond();
-	  gpioLed1SetOn();
-	  //gpioLed0SetOn();
+  while (1)
+  {
+	 //em_sleep();
+	  if(EM>0 && EM<3 )			//If the desired energy mode is EM1, EM2 use the SLEEP_Sleep function
+	  SLEEP_Sleep();
+	  else if(EM==3)
+	  EMU_EnterEM3(true);		//If the desired energy mode is EM3 use EMU_EnterEM3 function.
 
   }
 }
+
+
