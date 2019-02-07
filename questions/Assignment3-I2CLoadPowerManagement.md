@@ -8,16 +8,16 @@ See [Mastering Markdown](https://guides.github.com/features/mastering-markdown/)
 1. What is the average current per period?   
    Answer:
    <br>Screenshot:  
-   ![Avg_current_per_period](screenshots/sampleimage.jpg)  
+   ![Avg_current_per_period](https://github.com/CU-ECEN-5823/assignment-3-i2c-load-power-management-PuneetBansal/blob/master/screenshots/Avg_current_per_period.JPG)  
 2. What is the average current when the Si7021 is Load Power Management OFF?  
    Answer:
    <br>Screenshot:  
-   ![Avg_current_lpmOFF](link-to-screenshot-image)
+   ![Avg_current_lpmOFF](https://github.com/CU-ECEN-5823/assignment-3-i2c-load-power-management-PuneetBansal/blob/master/screenshots/Avg_current_lpmOFF.JPG)
 3. What is the average current when the Si7021 is Load Power Management ON?  
    Answer:
    <br>Screenshot:  
-   ![Avg_current_lpmON](link-to-screenshot-image)
+   ![Avg_current_lpmON](https://github.com/CU-ECEN-5823/assignment-3-i2c-load-power-management-PuneetBansal/blob/master/screenshots/Avg_current_lpmON.JPG)
 4. How long is the Si7021 Load Power Management ON for 1 temperature reading?  
    Answer:
    <br>Screenshot:  
-   ![Time_lpmON](link-to-screenshot-image)
+   ![Time_lpmON](https://github.com/CU-ECEN-5823/assignment-3-i2c-load-power-management-PuneetBansal/blob/master/screenshots/Time_lpmON.JPG)
