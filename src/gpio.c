@@ -30,6 +30,11 @@ void gpioInit()
 	GPIO_PinModeSet(LED1_port, LED1_pin, gpioModePushPull, false);
 }
 
+void gpioLed0Toggle()
+{
+	GPIO_PinOutToggle(LED0_port,LED0_pin);
+}
+
 void gpioLed0SetOn()
 {
 	GPIO_PinOutSet(LED0_port,LED0_pin);

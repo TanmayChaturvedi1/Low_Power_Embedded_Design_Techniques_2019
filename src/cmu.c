@@ -16,12 +16,12 @@
  */
 void clock_init()
 {
-	if(EM>=0 && EM<3)
+	if(sleepEM>=0 && sleepEM<3)
 	{
 		CMU_OscillatorEnable(cmuOsc_LFXO,true,true);			//Enable low frequency crystal oscillator
 		CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_LFXO); 		//Selecting the branch as LFA and clock source to be LFXO
 	}
-	else if(EM==3)
+	else if(sleepEM==3)
 	{
 		CMU_OscillatorEnable(cmuOsc_ULFRCO,true,true);			//Enable low frequency crystal oscillator
 		CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_ULFRCO); 		//Selecting the branch as LFA and clock source to be LFXO

@@ -13,5 +13,7 @@
 
 uint32_t ticks,freq,LedOn_Ticks,flags;
 
+
 void prescale_set();
 void letimer_init();
+void timerWaitUs(uint32_t);

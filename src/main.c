@@ -1,9 +1,9 @@
 /*
  * @filename	: main.c
- * @description	: Configuring LETIMER0 in various sleep modes and blinking LED at
- * 				  appropriate LED on time.
+ * @description	: Enabling I2C communication between Si7021 and blue gecko to obtain temperature readings.
+ *
  * @author 		: Puneet Bansal
- * @Reference	: Lecture 4 slides
+ * @Reference	: Lecture 5&6 slides
  */
 
 
@@ -66,6 +66,7 @@ static const gecko_configuration_t config = {
 };
 
 
+
 int main(void)
 {
   // Initialize device
@@ -81,24 +82,64 @@ int main(void)
   clock_init();
 
   letimer_init();
+
   gpioInit();
+  initApp();
+  logInit();
 
+  i2c_init();
 
-
-  /* Infinite loop */
-  if(EM>0 && EM<3) 				//Check if desired energy mode is 1,2
-  SLEEP_SleepBlockBegin(EM+1);
+  if(sleepEM>0 && sleepEM<3) 							//Check if desired energy mode is 1,2
+  SLEEP_SleepBlockBegin(sleepEM+1);
 
 
   while (1)
   {
-	 //em_sleep();
-	  if(EM>0 && EM<3 )			//If the desired energy mode is EM1, EM2 use the SLEEP_Sleep function
-	  SLEEP_Sleep();
-	  else if(EM==3)
-	  EMU_EnterEM3(true);		//If the desired energy mode is EM3 use EMU_EnterEM3 function.
+	  uint16_t local_scheduler;					//local variable to store the value of scheduler
 
-  }
-}
+	  /*Critical section begins*/
+	  CORE_ATOMIC_IRQ_DISABLE();
+	  local_scheduler=scheduler;
+	  CORE_ATOMIC_IRQ_ENABLE();
+	  /*Critical section ends*/
+
+	  if(local_scheduler)
+	  {
+		  if(local_scheduler & MEAS_TEMP)
+		  {
+			  GPIO_PinOutSet(SENSOR_ENABLE_PORT,SENSOR_ENABLE_PIN);
+			  timerWaitUs(80000);
+			  temp_get();
+			  GPIO_PinOutClear(SENSOR_ENABLE_PORT,SENSOR_ENABLE_PIN);
+
+			  /*Critical section begins*/
+			  CORE_ATOMIC_IRQ_DISABLE();
+			  scheduler&= ~MEAS_TEMP;
+			  CORE_ATOMIC_IRQ_ENABLE();
+			  /*Critical section ends*/
+		  }
+
+	  }
+
+	  else
+	  {
+
+		  if(sleepEM>0 && sleepEM<3 )			//If the desired energy mode is EM1, EM2 use the SLEEP_Sleep function
+	  	  	  {
+			  //logFlush();
+			  SLEEP_Sleep();
+	  	  	  }
+
+		  else if(sleepEM==3)
+		  	  {
+			  EMU_EnterEM3(true);		//If the desired energy mode is EM3 use EMU_EnterEM3 function.
+		  	  }
+
+	  }//ending else
+
+
+  }//ending while
+
+}//ending main
 
 

@@ -6,8 +6,14 @@
  */
 #include "letimer.h"
 #include "main.h"
+int i=1;
 
-
+/*
+ * @description
+ * Populating LETIMER_Init structure with default values and initialising LETIMER.
+ * Set the compare value in COMP0 register according to the required delay using CompareSet().
+ * Enable underflow interrupt, NVIC and LETIMER.
+ */
 void letimer_init()
 {
 
@@ -28,10 +34,10 @@ void letimer_init()
 
 	LETIMER_CompareSet(LETIMER0,0,ticks);
 
-	LedOn_Ticks= freq*LED_ONTIME;
-	LETIMER_CompareSet(LETIMER0,1,LedOn_Ticks);
+	//LedOn_Ticks= freq*LED_ONTIME;
+	//LETIMER_CompareSet(LETIMER0,1,LedOn_Ticks);
 
-	LETIMER_IntEnable(LETIMER0,LETIMER_IEN_COMP1| LETIMER_IEN_UF); /*Enable COMP1 and Underflow interrupts*/
+	LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF ); /*Enable Underflow interrupts*/
 
 	NVIC_EnableIRQ(LETIMER0_IRQn);
 
@@ -46,26 +52,61 @@ void letimer_init()
 
 void prescale_set()
 {
-int j=0;
-if(EM>=0 && EM<3)
+	int j=0;
+	if(sleepEM>=0 && sleepEM<3)
 	{
-	freq= LFX0_FREQ;		/*Select freq=32768 for EM(0-2)*/
+		freq= LFX0_FREQ;		/*Select freq=32768 for EM(0-2)*/
 	}
-else if (EM==3)
+	else if (sleepEM==3)
 	{
-	freq= ULFRCO_FREQ;		/*Select freq=1000Hz for EM(3)*/
+		freq= ULFRCO_FREQ;		/*Select freq=1000Hz for EM(3)*/
 	}
-ticks=LED_PERIOD*freq;
+	ticks=LED_PERIOD*freq;
 
-if(ticks> MAX_TICKS)
+	if(ticks> MAX_TICKS)
 	{
-	while(ticks> MAX_TICKS)
+		while(ticks> MAX_TICKS)
 		{
-		ticks=ticks/2;
-		freq=freq/2;
-		j++;
+			ticks=ticks/2;
+			freq=freq/2;
+			j++;
 		}
-	CMU_ClockDivSet(cmuClock_LETIMER0,pow(2,j));
+		CMU_ClockDivSet(cmuClock_LETIMER0,pow(2,j));
+	}
+}
+/*
+ * @description
+ *  Function to generate delay in micro seconds.
+ *
+ * @param us_wait
+ * delay in microsecond required
+ *
+ */
+void timerWaitUs(uint32_t us_wait)
+{
+	uint32_t current_ticks,max_tick,count_upto;
+	uint32_t us_ticks;
+
+	us_ticks=freq * us_wait;
+	us_ticks=us_ticks/1000000;	/*Calculate the ticks required in us*/
+
+	current_ticks=LETIMER_CounterGet(LETIMER0); /*Get the present value of timer count*/
+
+	if(current_ticks>us_ticks)
+	{
+		count_upto=current_ticks-us_ticks;
+		//gpioLed0SetOn();
+		while(LETIMER_CounterGet(LETIMER0)!=count_upto);
+		//gpioLed0SetOff();
+	}
+	else
+	{
+		max_tick=LETIMER_CompareGet(LETIMER0,0);
+
+		//gpioLed0SetOn();
+		while(LETIMER_CounterGet(LETIMER0)!=(max_tick-(us_ticks-current_ticks)));
+		//gpioLed0SetOff();
+
 	}
 }
 
@@ -83,16 +124,10 @@ void LETIMER0_IRQHandler(void)
 CORE_ATOMIC_IRQ_DISABLE ();
 flags=LETIMER_IntGet(LETIMER0);
 
-if(flags & LETIMER_IF_COMP1)
-	{
-	LETIMER_IntClear(LETIMER0,LETIMER_IFC_COMP1);
-	gpioLed0SetOn();
-	}
-if(flags & LETIMER_IF_UF)
-	{
-	LETIMER_IntClear(LETIMER0,LETIMER_IFC_UF);
-	gpioLed0SetOff();
-	}
+scheduler=MEAS_TEMP;
+LETIMER_IntClear(LETIMER0,LETIMER_IFC_UF);
+
+
 CORE_ATOMIC_IRQ_ENABLE();
 }
 
