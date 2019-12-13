@@ -24,6 +24,7 @@
 #include "em_cmu.h"
 #include "em_emu.h"
 #include "em_rtcc.h"
+#include "src/main.h"
 
 #include "bsp.h"
 
@@ -46,11 +47,17 @@ void initMcu(void)
   CHIP_Init();
 
   // Set up DC-DC converter
-  EMU_DCDCInit_TypeDef dcdcInit = BSP_DCDC_INIT;
+
   #if HAL_DCDC_BYPASS
   dcdcInit.dcdcMode = emuDcdcMode_Bypass;
   #endif
-  EMU_DCDCInit(&dcdcInit);
+
+	#if GEEKY_PANDA_LOAD
+  	  EMU_DCDCPowerOff();
+	#else
+  	  EMU_DCDCInit_TypeDef dcdcInit = BSP_DCDC_INIT;
+  	  EMU_DCDCInit(&dcdcInit);
+	#endif
 
   // Set up clocks
   initMcu_clocks();
@@ -94,26 +101,37 @@ static void initMcu_clocks(void)
     hfxoInit.ctuneSteadyState = BSP_CLK_HFXO_CTUNE;
   }
 #endif
+
+	#if !(GEEKY_PANDA_LOAD)
   CMU_HFXOInit(&hfxoInit);
 
-  // Set system HFXO frequency
+  //Set system HFXO frequency
   SystemHFXOClockSet(BSP_CLK_HFXO_FREQ);
 
-  // Enable HFXO oscillator, and wait for it to be stable
+  //Enable HFXO oscillator, and wait for it to be stable
   CMU_OscillatorEnable(cmuOsc_HFXO, true, true);
 
-  // Enable HFXO Autostart only if EM2 voltage scaling is disabled.
-  // In 1.0 V mode the chip does not support frequencies > 21 MHz,
-  // this is why HFXO autostart is not supported in this case.
+  //Enable HFXO Autostart only if EM2 voltage scaling is disabled.
+  //In 1.0 V mode the chip does not support frequencies > 21 MHz,
+  //this is why HFXO autostart is not supported in this case.
+  #endif
+
 #if!defined(_EMU_CTRL_EM23VSCALE_MASK)
   // Automatically start and select HFXO
   CMU_HFXOAutostartEnable(0, true, true);
 #else
-  CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFXO);
+	#if GEEKY_PANDA_LOAD
+  	  CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFRCO);
+	#else
+  	CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFXO);
+  	#endif
+
 #endif//_EMU_CTRL_EM23VSCALE_MASK
 
-  // HFRCO not needed when using HFXO
-  CMU_OscillatorEnable(cmuOsc_HFRCO, false, false);
+#if !(GEEKY_PANDA_LOAD)
+// HFRCO not needed when using HFXO
+CMU_OscillatorEnable(cmuOsc_HFRCO, false, false);
+#endif
 
   // Enabling HFBUSCLKLE clock for LE peripherals
   CMU_ClockEnable(cmuClock_HFLE, true);

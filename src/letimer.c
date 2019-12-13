@@ -28,20 +28,21 @@ void letimer_init()
 	init.ufoa0=letimerUFOANone;
 	init.ufoa1=letimerUFOANone;
 
-	prescale_set();
+	//prescale_set();
 
 	LETIMER_Init(LETIMER0,&init);
 
-	LETIMER_CompareSet(LETIMER0,0,ticks);
+	LETIMER_CompareSet(LETIMER0,0,1000);
 
 	//LedOn_Ticks= freq*LED_ONTIME;
-	//LETIMER_CompareSet(LETIMER0,1,LedOn_Ticks);
+	//LETIMER_CompareSet(LETIMER0,1,1000);//LedOn_Ticks);
 
 	LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF ); /*Enable Underflow interrupts*/
 
 	NVIC_EnableIRQ(LETIMER0_IRQn);
-
 	LETIMER_Enable(LETIMER0, true);
+
+
 }
 
 /*
@@ -122,11 +123,13 @@ void timerWaitUs(uint32_t us_wait)
 void LETIMER0_IRQHandler(void)
 {
 CORE_ATOMIC_IRQ_DISABLE ();
-flags=LETIMER_IntGet(LETIMER0);
-
-scheduler=MEAS_TEMP;
-LETIMER_IntClear(LETIMER0,LETIMER_IFC_UF);
-
+flags=LETIMER_IntGetEnabled(LETIMER0);
+LETIMER_IntClear(LETIMER0,flags);
+LOG_INFO("LETIMER triggered");
+if((flags & LETIMER_IF_UF) == LETIMER_IF_UF)
+	{
+	scheduler |= TIMESTAMP_1SEC;
+	}
 
 CORE_ATOMIC_IRQ_ENABLE();
 }

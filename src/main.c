@@ -40,11 +40,13 @@
 #include "em_chip.h"
 #include "gpio.h"
 #include "sleep.h"
+#include "spi_routines.h" //for temp sensor
 #ifndef MAX_CONNECTIONS
 #define MAX_CONNECTIONS 4
 #endif
 
 uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
+
 
 
 // Gecko configuration parameters (see gecko_configuration.h)
@@ -65,8 +67,16 @@ static const gecko_configuration_t config = {
 #endif // (HAL_PA_ENABLE) && defined(FEATURE_PA_HIGH_POWER)
 };
 
+/*DEFINE to switch between loading the code into blue gecko and loading the code on the
+GeekyPanda board.
+In the GeekyPanda board, DC-DC converter and external oscillator is turned off and the internal
+oscillator is always turned on.
+*/
+//#define GEEKY_PANDA_LOAD 1
+extern struct bme280_dev dev;
+extern struct bme280_data comp_data;
 
-
+uint8_t second_count;
 int main(void)
 {
   // Initialize device
@@ -77,69 +87,122 @@ int main(void)
   initApp();
 
   // Initialize stack
-  gecko_init(&config);
+  //gecko_init(&config);
+  //LOG_INFO("log initialised");
 
   clock_init();
-
+  //LOG_INFO("clock initialised");
   letimer_init();
-
+  //LOG_INFO("letimer initialised");
   gpioInit();
-  initApp();
+  //LOG_INFO("GPIO initialised");
+  GPIO_IntClear(0xffff);
+
   logInit();
+  LOG_INFO("log initialised");
+
+
 
   i2c_init();
+  LOG_INFO("i2c initialised");
+
+  BME280_SPI_init();
+  LOG_INFO("spi initialised");
+  /*Spi varibales*/
+
+  int8_t result;
+  uint8_t reg_data;
+  temp_humidity_return_status_e return_status;
+  temp_ready=0;
+  TxBufferIndex = 0;
+  RxBufferIndex = 0;
+  timer_expired = false;
 
   if(sleepEM>0 && sleepEM<3) 							//Check if desired energy mode is 1,2
   SLEEP_SleepBlockBegin(sleepEM+1);
 
+  //freefall_detection();
+  gotInt =0;
+  gotInt1 = 0;
+  GPIO_PinOutClear(gpioPortD,10);
+  GPIO_PinOutSet(gpioPortF,3);//TO TURN ON THE SENSOR
+  timerWaitUs(1000); // time delay to ensure the sensor turns on
+  LOG_INFO("Before check func");
+  magnetic_detection();
+  motion_detection();
+  NVIC_EnableIRQ(GPIO_EVEN_IRQn);
+  NVIC_EnableIRQ(GPIO_ODD_IRQn);
 
+  //LOG_INFO("Entered main");
+  /*Temp sensor BIST*/
+  /*Temp sensor initialisation*/
+  result = BME280_Device_init();
+  second_count =0;
+  scheduler =0;
+
+
+  if( result == BME280_OK)
+    {
+  	  LOG_INFO("Sensor Initialized\n");
+  	  bme280_get_regs(BME280_CHIP_ID_ADDR, &reg_data, 1, &dev);
+  	  temp_ready = 1;
+    }
+
+  LETIMER_Enable(LETIMER0, true);
   while (1)
   {
-	  uint16_t local_scheduler;					//local variable to store the value of scheduler
-
-	  /*Critical section begins*/
-	  CORE_ATOMIC_IRQ_DISABLE();
-	  local_scheduler=scheduler;
-	  CORE_ATOMIC_IRQ_ENABLE();
-	  /*Critical section ends*/
-
-	  if(local_scheduler)
-	  {
-		  if(local_scheduler & MEAS_TEMP)
-		  {
-			  GPIO_PinOutSet(SENSOR_ENABLE_PORT,SENSOR_ENABLE_PIN);
-			  timerWaitUs(80000);
-			  temp_get();
-			  GPIO_PinOutClear(SENSOR_ENABLE_PORT,SENSOR_ENABLE_PIN);
-
-			  /*Critical section begins*/
-			  CORE_ATOMIC_IRQ_DISABLE();
-			  scheduler&= ~MEAS_TEMP;
-			  CORE_ATOMIC_IRQ_ENABLE();
-			  /*Critical section ends*/
-		  }
-
-	  }
-
-	  else
-	  {
-
-		  if(sleepEM>0 && sleepEM<3 )			//If the desired energy mode is EM1, EM2 use the SLEEP_Sleep function
-	  	  	  {
-			  //logFlush();
-			  SLEEP_Sleep();
-	  	  	  }
-
-		  else if(sleepEM==3)
-		  	  {
-			  EMU_EnterEM3(true);		//If the desired energy mode is EM3 use EMU_EnterEM3 function.
-		  	  }
-
-	  }//ending else
-
+	  task_scheduler();
 
   }//ending while
 
 }//ending main
 
+void task_scheduler()
+{
+	if((scheduler & TIMESTAMP_1SEC) == TIMESTAMP_1SEC)
+		  	  {
+		  		  LOG_INFO("Entered scheduler");
+		  		  second_count++;
+		  		  if(second_count%5 == 0)
+		  		  {
+		  			  return_status = get_temp_pres_humidity(25, 50);
+		  		  	  LOG_INFO("Temp sensor return %d",return_status);
+		  		  	  second_count = 0;
+		  		  }
+		  	  scheduler &= ~ TIMESTAMP_1SEC;
+		  	  }
+
+		  if((scheduler & MOTION_DETECTION) == MOTION_DETECTION)
+		  {
+			  uint8_t source = i2c_write_read(0X0C,1);
+			  LOG_INFO("source in motion %x",source);
+			  if((source & 0x04) ==0x04)
+			  {
+				  GPIO_PinOutSet(gpioPortD,10);
+
+				  LOG_INFO("Inside If");
+				  uint8_t val = i2c_write_read(0x16,1);
+			  }
+			  scheduler &= ~ MOTION_DETECTION;
+		  }
+
+		  if((scheduler & MAGNETIC_DETECTION) == MAGNETIC_DETECTION)
+		  	{
+			  uint8_t source1 = i2c_write_read(0X0C,1);
+			  uint8_t source = i2c_write_read(0X53,1);
+		  		  LOG_INFO("Source of interrupt is %x", source);
+		  		  //GPIO_PinOutSet(gpioPortD,10);
+		  		  if((source & 0x04) ==0x04)
+		  		  {
+		  			  LOG_INFO("Inside If");
+		  			  //uint8_t val = i2c_write_read(0x16,1);
+		  			  magXMax = magYMax = magZMax = (int16_t)0x8000;
+					  magXMin = magYMin = magZMin = (int16_t)0x7FFF;
+		  		  }
+		  		scheduler &= ~ MAGNETIC_DETECTION;
+
+		  	  }
+
+
+}
 
