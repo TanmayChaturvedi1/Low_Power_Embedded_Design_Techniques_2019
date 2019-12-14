@@ -26,9 +26,6 @@
 
 #define TIMESTAMP_1SEC 1
 
-volatile uint16_t scheduler; 		/*Global variable to keep a track of events*/
-
-
 /*DEFINE to switch between loading the code into blue gecko and loading the code on the
 GeekyPanda board.
 In the GeekyPanda board, DC-DC converter and external oscillator is turned off and the internal
@@ -38,6 +35,29 @@ oscillator is always turned on.
 //also change in i2c.h
 //and gpio.h
 
+volatile uint16_t scheduler; 		/*Global variable to keep a track of events*/
 uint8_t temp_ready;
+uint32_t timestamp_var;
+uint8_t inside_motion;
+uint8_t inside_magnetic;
+/*
+ */
+
+typedef enum
+{
+SYSTEM_DOC_SRC,
+SYSTEM_TRANSIT,
+SYSTEM_DOC_DESTN
+}stateOfSystem;
+
+stateOfSystem systemState;
+stateOfSystem prevState;
+uint8_t tempThreshold;
+uint8_t humidThreshold;
+
 void task_scheduler();
+void interrupt_enable();
+void dockingMode_initialisations();
+void transitMode_initialisations();
+void interrupt_disable();
 

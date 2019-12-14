@@ -7,7 +7,8 @@
 #include "letimer.h"
 #include "main.h"
 int i=1;
-
+//extern inside_motion;
+//extern inside_magnetic;
 /*
  * @description
  * Populating LETIMER_Init structure with default values and initialising LETIMER.
@@ -31,18 +32,11 @@ void letimer_init()
 	//prescale_set();
 
 	LETIMER_Init(LETIMER0,&init);
-
 	LETIMER_CompareSet(LETIMER0,0,1000);
-
-	//LedOn_Ticks= freq*LED_ONTIME;
-	//LETIMER_CompareSet(LETIMER0,1,1000);//LedOn_Ticks);
-
 	LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF ); /*Enable Underflow interrupts*/
 
-	NVIC_EnableIRQ(LETIMER0_IRQn);
+	//NVIC_EnableIRQ(LETIMER0_IRQn);
 	LETIMER_Enable(LETIMER0, true);
-
-
 }
 
 /*
@@ -111,6 +105,36 @@ void timerWaitUs(uint32_t us_wait)
 	}
 }
 
+/*
+ * @description
+ * triggers a comp1 interrupt on achieving the desired amount of ms delay.
+ *
+ */
+void timerSetEventinms(uint32_t ms_until_wakeup)
+{
+	uint32_t current_ticks=0;
+	uint32_t max_tick,count_upto;
+	uint32_t ms_ticks;
+
+	ms_ticks=1000 * ms_until_wakeup;
+	ms_ticks=ms_ticks/1000;	/*Calculate the ticks required in s*/
+
+	current_ticks=LETIMER_CounterGet(LETIMER0); /*Get the present value of timer count*/
+
+	if(current_ticks>=ms_ticks)
+	{
+		count_upto=current_ticks-ms_ticks;
+	}
+	else
+	{
+		max_tick=LETIMER_CompareGet(LETIMER0,0);
+		count_upto=(max_tick-(ms_ticks-current_ticks));
+	}
+
+	LETIMER_CompareSet(LETIMER0,1,count_upto);
+	LETIMER_IntEnable(LETIMER0, LETIMER_IEN_COMP1);
+}
+
 
 /*
  * @description
@@ -125,11 +149,27 @@ void LETIMER0_IRQHandler(void)
 CORE_ATOMIC_IRQ_DISABLE ();
 flags=LETIMER_IntGetEnabled(LETIMER0);
 LETIMER_IntClear(LETIMER0,flags);
-LOG_INFO("LETIMER triggered");
+//LOG_INFO("LETIMER triggered");
 if((flags & LETIMER_IF_UF) == LETIMER_IF_UF)
 	{
 	scheduler |= TIMESTAMP_1SEC;
 	}
+
+if((flags & LETIMER_IF_COMP1) == LETIMER_IF_COMP1)
+{
+	LOG_INFO("Comp1 interrupt triggered");
+	if(inside_motion == 1)
+	{
+		motion_debounce_flag =1 ;
+	}
+	if(inside_magnetic == 1)
+	{
+		magnetic_debounce_flag =1 ;
+	}
+
+	//LETIMER_CompareSet(LETIMER0,1,0xFFFF);
+	LETIMER_IntDisable(LETIMER0,LETIMER_IFC_COMP1);
+}
 
 CORE_ATOMIC_IRQ_ENABLE();
 }

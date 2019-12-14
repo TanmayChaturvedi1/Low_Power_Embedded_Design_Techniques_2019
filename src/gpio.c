@@ -19,6 +19,7 @@
 #define LED1_pin 7
 
 extern int scheduler;
+extern docking_mode dock_button_status;
 
 
 void gpioInit()
@@ -44,8 +45,8 @@ void gpioInit()
 	GPIO_PinModeSet(gpioPortA,1, gpioModePushPull,1);//ERROR DEBUG.
 
 
-	GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, true );
-	GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, true );
+//	GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, true );
+//	GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, true );
 
 	//GPIO_ExtIntConfig(gpioPortF,6,6, true, true,true );
 
@@ -81,6 +82,46 @@ uint8_t readGPIOPin(GPIO_Port_TypeDef gpioPort, uint8_t gpioPin )
 	return val;
 }
 
+
+
+/* Function to turn the NFC ON/OFF */
+void NFC_on(bool on)
+{
+	if(on)
+	{
+		GPIO_DriveStrengthSet(NFC_POWER_PORT, gpioDriveStrengthStrongAlternateStrong);
+		GPIO_PinModeSet(NFC_POWER_PORT, NFC_POWER_PIN, gpioModePushPull, false);
+		GPIO_PinOutSet(NFC_POWER_PORT, NFC_POWER_PIN);
+	}
+	else
+	{
+		GPIO_PinOutClear(NFC_POWER_PORT, NFC_POWER_PIN);
+	}
+}
+
+
+/* Enable/Disable docking mode */
+// Docking mode interrupts
+void docking_mode_config()
+{
+	GPIO_PinModeSet(DOCKING_PORT,DOCKING_PIN,gpioModeInput,false);
+	GPIO_ExtIntConfig(	DOCKING_PORT,
+						DOCKING_PIN,
+						DOCKING_INT_NO,
+						RISING_EDGE_INT_ENABLE,
+						FALLING_EDGE_INT_ENABLE,
+						DOCKING_INTERRUPTS_ENABLE);
+	NVIC_EnableIRQ(GPIO_ODD_IRQn);
+}
+
+
+/* Get current mode of the docking switch */
+docking_mode get_docking_switch_position()
+{
+	return GPIO_PinInGet(DOCKING_PORT, DOCKING_PIN);
+}
+
+
 void GPIO_EVEN_IRQHandler()
 {
 	LOG_INFO("%d",GPIO_IntGetEnabled());
@@ -94,10 +135,28 @@ void GPIO_EVEN_IRQHandler()
 void GPIO_ODD_IRQHandler()
 {
 	//LOG_INFO("Entered odd handler");
-	GPIO_IntClear(GPIO_IntGetEnabled());
+	uint32_t flags = GPIO_IntGetEnabled();
+	GPIO_IntClear(flags);
+	LOG_INFO("flags= %d", flags);
 	LOG_INFO("Entered handler");
-	//gotInt1=1;
-	scheduler |= MAGNETIC_DETECTION;
+	if((flags & (1<<5)) == (1<<5))
+	{
+		LOG_INFO("Inside magnetic detection");
+		scheduler |= MAGNETIC_DETECTION;
+	}
+	if((flags & (1<<13)) == (1<<13))
+	{
+	LOG_INFO("Inside switch detection");
+	int pos = get_docking_switch_position();
+		if(pos)
+		{
+			dock_button_status = BUTTON_TRANSIT;
+		}
+		else
+		{
+			dock_button_status = BUTTON_DOCK;
+		}
+	}
 }
 
 //void gpioCallback1(uint8_t pin)

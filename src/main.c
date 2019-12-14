@@ -41,13 +41,13 @@
 #include "gpio.h"
 #include "sleep.h"
 #include "spi_routines.h" //for temp sensor
+#include "nfc_data.h"
 #ifndef MAX_CONNECTIONS
 #define MAX_CONNECTIONS 4
 #endif
 
 uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
-
-
+extern uint8_t nfc_data[117][16];
 
 // Gecko configuration parameters (see gecko_configuration.h)
 static const gecko_configuration_t config = {
@@ -77,6 +77,11 @@ extern struct bme280_dev dev;
 extern struct bme280_data comp_data;
 
 uint8_t second_count;
+sensor_return_status return_status;
+docking_mode package_status;
+
+extern uint8_t sector;
+docking_mode dock_button_status;
 int main(void)
 {
   // Initialize device
@@ -86,123 +91,237 @@ int main(void)
   // Initialize application
   initApp();
 
-  // Initialize stack
-  //gecko_init(&config);
-  //LOG_INFO("log initialised");
-
   clock_init();
-  //LOG_INFO("clock initialised");
-  letimer_init();
-  //LOG_INFO("letimer initialised");
+
+  //letimer_init();
+
   gpioInit();
-  //LOG_INFO("GPIO initialised");
+
   GPIO_IntClear(0xffff);
 
   logInit();
-  LOG_INFO("log initialised");
 
-
-
-  i2c_init();
-  LOG_INFO("i2c initialised");
-
-  BME280_SPI_init();
-  LOG_INFO("spi initialised");
-  /*Spi varibales*/
-
-  int8_t result;
-  uint8_t reg_data;
-  temp_humidity_return_status_e return_status;
-  temp_ready=0;
-  TxBufferIndex = 0;
-  RxBufferIndex = 0;
+  //BME280_SPI_init();
+  LOG_INFO("After bme init");
+//  /*Spi varibales*/
+//
+//  int8_t result;
+//  uint8_t reg_data;
+//
+//  temp_ready=0;
+//  TxBufferIndex = 0;
+//  RxBufferIndex = 0;
   timer_expired = false;
+  motion_debounce_flag= 1;
+  magnetic_debounce_flag = 1;
+  inside_motion = 0;
+  inside_magnetic = 0;
+  temp_threshold = 25;
+  humid_threshold = 50;
+  sector = 0x02;
 
-  if(sleepEM>0 && sleepEM<3) 							//Check if desired energy mode is 1,2
+  if(sleepEM>0 && sleepEM<3) 			//Check if desired energy mode is 1,2
   SLEEP_SleepBlockBegin(sleepEM+1);
 
-  //freefall_detection();
   gotInt =0;
   gotInt1 = 0;
   GPIO_PinOutClear(gpioPortD,10);
-  GPIO_PinOutSet(gpioPortF,3);//TO TURN ON THE SENSOR
-  timerWaitUs(1000); // time delay to ensure the sensor turns on
-  LOG_INFO("Before check func");
-  magnetic_detection();
-  motion_detection();
-  NVIC_EnableIRQ(GPIO_EVEN_IRQn);
-  NVIC_EnableIRQ(GPIO_ODD_IRQn);
+  GPIO_PinOutSet(gpioPortF,3);			//TO TURN ON THE SENSOR
+  timerWaitUs(1000); 					// time delay to ensure the sensor turns on
 
-  //LOG_INFO("Entered main");
-  /*Temp sensor BIST*/
+  //magnetic_detection();
+  //motion_detection();
+
+  //NVIC_EnableIRQ(GPIO_EVEN_IRQn);
+  //NVIC_EnableIRQ(GPIO_ODD_IRQn);
+
   /*Temp sensor initialisation*/
-  result = BME280_Device_init();
+
   second_count =0;
   scheduler =0;
+  timestamp_var =0;
+//  result = BME280_Device_init();
+//  LOG_INFO("Before sensor intialisation");
+//  if( result == BME280_OK)
+//    {
+//  	  LOG_INFO("Sensor Initialized\n");
+//  	  bme280_get_regs(BME280_CHIP_ID_ADDR, &reg_data, 1, &dev);
+//  	  temp_ready = 1;
+//    }
+  LOG_INFO("After sensor initialisation");
+  tempThreshold =0;
+  humidThreshold =0;
+  systemState = SYSTEM_DOC_SRC;
+  prevState = SYSTEM_DOC_SRC;
+
+  docking_mode_config();
+  dock_button_status = get_docking_switch_position();
+  uint8_t transit_initialisations = 1;
+  LOG_INFO("button status is", dock_button_status);
 
 
-  if( result == BME280_OK)
-    {
-  	  LOG_INFO("Sensor Initialized\n");
-  	  bme280_get_regs(BME280_CHIP_ID_ADDR, &reg_data, 1, &dev);
-  	  temp_ready = 1;
-    }
-
-  LETIMER_Enable(LETIMER0, true);
   while (1)
   {
-	  task_scheduler();
+	  switch(systemState)
+	  {
+	  case(SYSTEM_DOC_SRC):
 
+				if(dock_button_status == BUTTON_DOCK)
+				{
+					LOG_INFO("Inside system doc");
+					dockingMode_initialisations();
+					nfc_get_all_the_written_values(NFC_SLAVE_ADD,&tempThreshold, &humidThreshold);
+					LOG_INFO("temp = %d, humid = %d", tempThreshold,humidThreshold);
+					systemState = SYSTEM_TRANSIT;
+					prevState =	SYSTEM_DOC_SRC;
+					dock_button_status = BUTTON_NONE;
+				}
+				else
+				{
+					//LOG_INFO("Change the switch to Docking Mode");
+				}
+	  break;
+
+	  case(SYSTEM_TRANSIT):
+		//LOG_INFO("Inside system transit");
+				if(((prevState == SYSTEM_DOC_SRC)| (prevState == SYSTEM_TRANSIT)) && (dock_button_status == BUTTON_TRANSIT))
+				{
+					if(transit_initialisations == 1)
+					{
+						transitMode_initialisations();
+						interrupt_enable();
+						transit_initialisations = 0;
+					}
+					task_scheduler();
+					prevState = SYSTEM_TRANSIT;
+					systemState = SYSTEM_TRANSIT;
+				}
+
+				else if(prevState == SYSTEM_DOC_SRC && dock_button_status == BUTTON_NONE)
+					{
+						systemState = SYSTEM_TRANSIT;
+					}
+				else if(prevState == SYSTEM_TRANSIT && dock_button_status == BUTTON_DOCK)
+					{
+						dock_button_status = BUTTON_NONE;
+						systemState = SYSTEM_DOC_DESTN;
+					}
+
+
+	  break;
+
+	  case(SYSTEM_DOC_DESTN):
+		//LOG_INFO("Inside system doc destination");
+			  interrupt_disable();
+	  	  	  dockingMode_initialisations();
+	  	  	  for(int i =1;i<3;i++)
+	  	  	  {
+	  	  		  for(int j=0;j<16;j++)
+	  	  		  {
+	  	  			  printf("%c ",nfc_data[i][j]);
+	  	  		  }
+	  	  		 printf("\n");
+	  	  	  }
+	  	  	  nfc_i2c_write_data_to_nfc(NFC_SLAVE_ADD, sector);
+	  	  	  prevState = SYSTEM_DOC_DESTN;
+	  	  	  systemState = SYSTEM_TRANSIT;
+	  	  	  //LOG_INFO("Reached the end of the cycle");
+	  	  	  //systemState = SYSTEM_DOC_SRC;
+	  	  	  break;
+
+	  }
   }//ending while
+
 
 }//ending main
 
 void task_scheduler()
 {
 	if((scheduler & TIMESTAMP_1SEC) == TIMESTAMP_1SEC)
-		  	  {
-		  		  LOG_INFO("Entered scheduler");
-		  		  second_count++;
-		  		  if(second_count%5 == 0)
-		  		  {
-		  			  return_status = get_temp_pres_humidity(25, 50);
-		  		  	  LOG_INFO("Temp sensor return %d",return_status);
-		  		  	  second_count = 0;
-		  		  }
-		  	  scheduler &= ~ TIMESTAMP_1SEC;
-		  	  }
+	{
+		LOG_INFO("Entered scheduler");
+		second_count++;
+		timestamp_var++;
+		if(second_count%10 == 0)
+		{
+			return_status = get_temp_pres_humidity(tempThreshold, humidThreshold);
+			LOG_INFO("Temp sensor return %d",return_status);
+			nfc_data_update(timestamp_var,return_status);
+			second_count = 0;
+			GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, true );
+			GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, true );
+		}
+		scheduler &= ~ TIMESTAMP_1SEC;
+	}
 
-		  if((scheduler & MOTION_DETECTION) == MOTION_DETECTION)
-		  {
-			  uint8_t source = i2c_write_read(0X0C,1);
-			  LOG_INFO("source in motion %x",source);
-			  if((source & 0x04) ==0x04)
-			  {
-				  GPIO_PinOutSet(gpioPortD,10);
+	if((scheduler & MOTION_DETECTION) == MOTION_DETECTION)
+	{
+		{
+			GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, false );
+			uint8_t source = i2c_write_read(0X0C,1);
+			if((source & 0x04) ==0x04)
+			{
+				GPIO_PinOutSet(gpioPortD,10);
+				LOG_INFO("Inside motion detection If");
+				nfc_data_update(timestamp_var,EVENT_MOTION_DETECTED);
+				uint8_t val = i2c_write_read(0x16,1);
+			}
+		}
+		scheduler &= ~ MOTION_DETECTION;
+		inside_motion = 0;
+	}
 
-				  LOG_INFO("Inside If");
-				  uint8_t val = i2c_write_read(0x16,1);
-			  }
-			  scheduler &= ~ MOTION_DETECTION;
-		  }
+	if((scheduler & MAGNETIC_DETECTION) == MAGNETIC_DETECTION)
+	{
+		{
+			GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, false );
+			uint8_t source1 = i2c_write_read(0X0C,1);
+			uint8_t source = i2c_write_read(0X53,1);
+			//LOG_INFO("Source of interrupt is %x", source);
+			//GPIO_PinOutSet(gpioPortD,10);
+			if((source & 0x04) ==0x04)
+			{
+				LOG_INFO("Inside Magnetic Detection If");
+				nfc_data_update(timestamp_var,EVENT_MAGNETIC_FIELD_DETECTED);
 
-		  if((scheduler & MAGNETIC_DETECTION) == MAGNETIC_DETECTION)
-		  	{
-			  uint8_t source1 = i2c_write_read(0X0C,1);
-			  uint8_t source = i2c_write_read(0X53,1);
-		  		  LOG_INFO("Source of interrupt is %x", source);
-		  		  //GPIO_PinOutSet(gpioPortD,10);
-		  		  if((source & 0x04) ==0x04)
-		  		  {
-		  			  LOG_INFO("Inside If");
-		  			  //uint8_t val = i2c_write_read(0x16,1);
-		  			  magXMax = magYMax = magZMax = (int16_t)0x8000;
-					  magXMin = magYMin = magZMin = (int16_t)0x7FFF;
-		  		  }
-		  		scheduler &= ~ MAGNETIC_DETECTION;
+			}
+			scheduler &= ~ MAGNETIC_DETECTION;
+		}
 
-		  	  }
+	}
 
 
 }
+void dockingMode_initialisations()
+{
+	 nfc_i2c_init();
+}
 
+void transitMode_initialisations()
+{
+	letimer_init();
+	i2c_init();
+	BME280_SPI_init();
+	magnetic_detection();
+	motion_detection();
+	temp_sensor_init();
+	NVIC_EnableIRQ(GPIO_EVEN_IRQn);
+	NVIC_EnableIRQ(GPIO_ODD_IRQn);
+}
+
+void interrupt_enable()
+{
+	LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF ); /*Enable Underflow interrupts*/
+	GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, true );
+	GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, true );
+	NVIC_EnableIRQ(LETIMER0_IRQn);
+
+}
+
+void interrupt_disable()
+{
+	LETIMER_IntDisable(LETIMER0, LETIMER_IEN_UF); /*Enable Underflow interrupts*/
+	GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, false);
+	GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, false);
+	NVIC_DisableIRQ(LETIMER0_IRQn);
+}

@@ -45,12 +45,13 @@
 #define BME280_SPI_CS_PORT						(gpioPortD)
 
 typedef enum {
-	EVENT_TEMP_HUMID_NORMAL,
+	EVENT_MOTION_DETECTED,
+	EVENT_MAGNETIC_FIELD_DETECTED,
 	EVENT_TEMP_HIGH,
 	EVENT_HUMID_HIGH,
 	EVENT_TEMP_HUMID_HIGH
 }
-temp_humidity_return_status_e;
+sensor_return_status;
 
 /* Temp sensor defines*/
 
@@ -63,7 +64,8 @@ struct bme280_data *comp_data;*/
 uint32_t TxBufferIndex;
 uint32_t RxBufferIndex;
 bool timer_expired;
-
+uint8_t temp_threshold;
+uint8_t humid_threshold;
 
 /* Basic functions */
 void BME280_CS_High( void );
@@ -79,6 +81,7 @@ void BME280_user_delay_ms( uint32_t period );
 int8_t BME280_Device_init( void );
 int8_t stream_sensor_data_normal_mode(struct bme280_dev *dev);
 void print_sensor_data(struct bme280_data *comp_data);
-temp_humidity_return_status_e get_temp_pres_humidity(int32_t temp_threshold, int32_t humid_threshold);
+sensor_return_status get_temp_pres_humidity(int32_t, int32_t);
+void temp_sensor_init();
 
 #endif /* SRC_SPI_ROUTINES_H_ */

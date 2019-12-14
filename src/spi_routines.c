@@ -371,7 +371,7 @@ void USART1_RX_IRQHandler(void)
 
 
 // API to get sensor event info based on temperature and humidity threshold
-temp_humidity_return_status_e get_temp_pres_humidity(int32_t temp_threshold, int32_t humid_threshold)
+sensor_return_status get_temp_pres_humidity(int32_t temp_threshold, int32_t humid_threshold)
 {
 	int32_t temperature;
 	uint32_t pressure;
@@ -393,8 +393,21 @@ temp_humidity_return_status_e get_temp_pres_humidity(int32_t temp_threshold, int
 		return EVENT_TEMP_HIGH;
 	else if ( humidity >= humid_threshold )
 		return EVENT_HUMID_HIGH;
-	else
-		return EVENT_TEMP_HUMID_NORMAL;
 }
 
+void temp_sensor_init()
+{
+	int8_t result;
+	uint8_t reg_data;
+	TxBufferIndex = 0;
+	RxBufferIndex = 0;
+	result = BME280_Device_init();
+	LOG_INFO("Before sensor intialisation");
+	if( result == BME280_OK)
+	{
+		LOG_INFO("Sensor Initialized\n");
+		bme280_get_regs(BME280_CHIP_ID_ADDR, &reg_data, 1, &dev);
+	}
+
+}
 
