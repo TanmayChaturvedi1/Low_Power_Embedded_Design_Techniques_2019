@@ -71,7 +71,4 @@ docking_mode get_docking_switch_position();
 #define DOCKING_MODE 	(1 << 4)
 
 
-
-
-int gotInt,gotInt1;
 #endif /* SRC_GPIO_H_ */

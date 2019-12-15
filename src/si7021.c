@@ -42,7 +42,7 @@ void motion_detection()
 	i2c_write_new(0x2A, 0X08); //0X18
 	//i2c_write_new(0x2A,0X18);
 	timerWaitUs(10000);
-	LOG_INFO("%x", i2c_write_read(0X2A, 1));
+	//LOG_INFO("%x", i2c_write_read(0X2A, 1));
 	timerWaitUs(10000);
 
 	//Configuration Register set for Freefall Detection enabling “AND” condition, OAE = 0, Enabling X,
@@ -50,35 +50,35 @@ void motion_detection()
 	i2c_write_write(0x15, 0XD8);
 	//i2c_write_new(0x15,0XD8);
 	timerWaitUs(1000);
-	LOG_INFO("%x", i2c_write_read(0X15, 1));
+	//LOG_INFO("%x", i2c_write_read(0X15, 1));
 
 
 	//setting threshold for resulting acceleration <0.2g
 	i2c_write_write(0x17, 0X30);
 	//i2c_write_new(0x17,0X30);
 	timerWaitUs(1000);
-	LOG_INFO("%x", i2c_write_read(0X17, 1));
+	//LOG_INFO("%x", i2c_write_read(0X17, 1));
 
 
 	//setting the debounce counter to 120ms
 	i2c_write_write(0x18, 0X0A);
 	//i2c_write_new(0x18,0X0A);
 	timerWaitUs(1000);
-	LOG_INFO("%x", i2c_write_read(0X18, 1));
+	//LOG_INFO("%x", i2c_write_read(0X18, 1));
 
 
 	//Enabling motion/freefall interrupt in the system (ctrl_reg4)
 	i2c_write_write(0x2D, 0X04);
 	//i2c_write_new(0x2D,0X04);
 	timerWaitUs(1000);
-	LOG_INFO("%x", i2c_write_read(0X2D, 1));
+	//LOG_INFO("%x", i2c_write_read(0X2D, 1));
 
 
 	//Route the interrupt function to INT2 hardware pin (ctrl_reg4)
 	i2c_write_write(0x2E, 0X04);
 	//i2c_write_new(0x2E,0X04);
 	timerWaitUs(1000);
-	LOG_INFO("%x", i2c_write_read(0X2E, 1));
+	//LOG_INFO("%x", i2c_write_read(0X2E, 1));
 
 
 	//putting the device in active mode
@@ -88,7 +88,7 @@ void motion_detection()
 	//i2c_write_new(0x2A,(uint8_t)val|0x01);
 	timerWaitUs(1000);
 	//LOG_INFO("val is %x", (uint8_t)val|0x01);
-	LOG_INFO("%x", i2c_write_read(0X2A, 1));
+	//LOG_INFO("%x", i2c_write_read(0X2A, 1));
 
 }
 
@@ -323,12 +323,10 @@ void auto_calliberation()
 
 void magnetic_detection()
 {
-LOG_INFO("Inside check func");
 i2c_write_write(0x54, 0x02);
 i2c_write_write(0x55, 0xff);
 i2c_write_write(0x52, 0xCA);
 i2c_write_write(0x5A, 0x0A);
 i2c_write_write(0x5B, 0x1F);
 i2c_write_write(0x2C, 0x00);
-//i2c_write_write(0x2A, 0x19);
 }

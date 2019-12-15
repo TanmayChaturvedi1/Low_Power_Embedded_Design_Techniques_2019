@@ -132,13 +132,12 @@ uint8_t nfc_data[117][16] = {{0x03, 0xFF, 0x00, 0x3C, 0xC1, 0x01, 0, 0, 0x00, 0x
 void nfc_data_update(uint32_t time_variable, uint8_t event)
 {
 	static int section = 0;
-	LOG_INFO("Entered nfc data update %d and %d", time_variable, event);
+	LOG_INFO("Data updated with time %ld and value %ld", time_variable, event);
 	switch(section)
 	{
 	case 0:
 		// Set the event number
 		nfc_data[sector][7] = event + 48;
-		LOG_INFO("inside case 0");
 		// Write the time stamp
 		nfc_data[sector][6] = (time_variable%10)+48;
 		nfc_data[sector][5] = ((time_variable /10)%10)+48;

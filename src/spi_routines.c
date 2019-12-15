@@ -16,8 +16,6 @@ bool data_received;
 
 void BME280_SPI_init( void )
 {
-   LOG_INFO("SPI init invoked\n");
-
    CMU_ClockEnable(cmuClock_HFPER, true);
    CMU_ClockEnable( cmuClock_GPIO, true );
    CMU_ClockEnable( BME280_USART_CLK, true );
@@ -82,7 +80,6 @@ int8_t BME280_Device_init( void )
 	dev.delay_ms = BME280_user_delay_ms;
 
 	result = bme280_init(&dev);
-	LOG_INFO("result = %d\n", result);
 	return result;
 }
 
@@ -335,11 +332,10 @@ int8_t stream_sensor_data_normal_mode(struct bme280_dev *dev)
 	rslt = bme280_set_sensor_settings(settings_sel, dev);
 	rslt = bme280_set_sensor_mode(BME280_NORMAL_MODE, dev);
 
-	LOG_INFO("Temperature, Pressure, Humidity\r\n");
 		/* Delay while the sensor completes a measurement */
 		dev->delay_ms(70);
 		rslt = bme280_get_sensor_data(BME280_ALL, &comp_data, dev);
-		print_sensor_data(&comp_data);
+		//print_sensor_data(&comp_data);
 
 	return rslt;
 }
@@ -381,11 +377,13 @@ sensor_return_status get_temp_pres_humidity(int32_t temp_threshold, int32_t humi
 	int8_t rslt;
 	rslt = stream_sensor_data_normal_mode(&dev);
 	temperature = comp_data.temperature;
-	printf("received temp_data = %ld",comp_data.temperature);
 	pressure = comp_data.pressure;
-	printf("received pressure_data = %ld",comp_data.pressure);
 	humidity = comp_data.humidity;
-	printf("received humid_data = %ld",comp_data.humidity);
+	LOG_INFO("Temperature Value = %ld, Pressure Value = %ld, Humidity Value = %ld",comp_data.temperature,comp_data.pressure,comp_data.humidity);
+//	pressure = comp_data.pressure;
+//	LOG_INFO("Pressure Value = %ld",comp_data.pressure);
+//	humidity = comp_data.humidity;
+//	LOG_INFO("Humidity Value = %ld",comp_data.humidity);
 
 	if ( temperature >= temp_threshold && humidity >= humid_threshold )
 		return EVENT_TEMP_HUMID_HIGH;
@@ -393,6 +391,7 @@ sensor_return_status get_temp_pres_humidity(int32_t temp_threshold, int32_t humi
 		return EVENT_TEMP_HIGH;
 	else if ( humidity >= humid_threshold )
 		return EVENT_HUMID_HIGH;
+	return 0;
 }
 
 void temp_sensor_init()
@@ -402,10 +401,8 @@ void temp_sensor_init()
 	TxBufferIndex = 0;
 	RxBufferIndex = 0;
 	result = BME280_Device_init();
-	LOG_INFO("Before sensor intialisation");
 	if( result == BME280_OK)
 	{
-		LOG_INFO("Sensor Initialized\n");
 		bme280_get_regs(BME280_CHIP_ID_ADDR, &reg_data, 1, &dev);
 	}
 

@@ -205,7 +205,6 @@ void nfc_i2c_init()
 uint8_t* nfc_i2c_read_data_spm(uint8_t addr, uint8_t sector)
 {
 	// Writing sector to the NFC to point to it.
-
 	transfer_seq.addr		  = addr << 1;
 	transfer_seq.buf[0].data  = &sector;
 	transfer_seq.buf[0].len   = 1;
@@ -213,7 +212,6 @@ uint8_t* nfc_i2c_read_data_spm(uint8_t addr, uint8_t sector)
 
 	status = I2CSPM_Transfer(I2C0,&transfer_seq);
 	for(volatile int i=0;i<10000;i++);
-	LOG_INFO("The status of write is %d",status);
 
 	// Read the sector data from the NFC module.
 	transfer_seq.addr		  = addr << 1;
@@ -222,28 +220,17 @@ uint8_t* nfc_i2c_read_data_spm(uint8_t addr, uint8_t sector)
 	transfer_seq.flags		  = I2C_FLAG_READ;
 
 	status = I2CSPM_Transfer(I2C0,&transfer_seq);
-	LOG_INFO("The status of read is %d",status);
-
-	LOG_INFO("The data received is ");
-	for(int i=0; i<16; i++)
-	{
-		printf("%c",i2c_data[i]);
-	}
-	printf("\n\r");
 	for(volatile int i=0;i<60000;i++);
 	return i2c_data;
 }
 
 void nfc_i2c_write_data_spm(uint8_t address, uint8_t sector, uint8_t* write_data)
 {
-//	for(int i =2;i<=3;i++)
-//	  {
-		  for(int j=0;j<16;j++)
-		  {
-			  printf("%c ", write_data[j]);
-		  }
-		printf("\n");
-//	  }
+	for(int i=0;i<16;i++)
+	{
+		printf("%c ",write_data[i]);
+	}
+	printf("\n");
 
 	transfer_seq.addr		  = address << 1;
 	transfer_seq.buf[0].data  = &sector;
@@ -253,13 +240,12 @@ void nfc_i2c_write_data_spm(uint8_t address, uint8_t sector, uint8_t* write_data
 	transfer_seq.flags		  = I2C_FLAG_WRITE_WRITE;
 
 	status = I2CSPM_Transfer(I2C0,&transfer_seq);
-	LOG_INFO("The status of write is %d",status);
+	LOG_INFO("Status is %d",status);
 }
 
 
 void nfc_i2c_write_data_to_nfc(uint8_t address, uint8_t max_sectors)
 {
-
 	if (max_sectors < 55){
 		for(int i=0; i<max_sectors; i++){
 			nfc_i2c_write_data_spm(address, i+1, nfc_data[i]);
@@ -311,23 +297,28 @@ void nfc_get_all_the_written_values(uint8_t address, uint8_t* temperature_th, ui
 
 	// Get the sectors 0x01 data and update the timestamp
 	data = nfc_i2c_read_data_spm(address, 0x01);
-	nfc_data[1][0] = data[9] - 48;
-	nfc_data[1][1] = data[10] - 48;
-	nfc_data[1][2] = data[11] - 48;
-	nfc_data[1][3] = data[12] - 48;
-	nfc_data[1][4] = data[13] - 48;
-	nfc_data[1][5] = data[14] - 48;
-	nfc_data[1][6] = data[15] - 48;
+
+	nfc_data[1][0] = data[9];
+	nfc_data[1][1] = data[10];
+	nfc_data[1][2] = data[11];
+	nfc_data[1][3] = data[12];
+	nfc_data[1][4] = data[13];
+	nfc_data[1][5] = data[14];
+	nfc_data[1][6] = data[15];
 
 
 	data = nfc_i2c_read_data_spm(address, 0x02);
-	nfc_data[1][7] = data[0] - 48;
-	nfc_data[1][8] = data[1] - 48;
-	nfc_data[1][9] = data[2] - 48;
-	nfc_data[1][10] = data[3] - 48;
-	nfc_data[1][11] = data[4] - 48;
-	nfc_data[1][12] = data[5] - 48;
+	nfc_data[1][7] = data[0];
+	nfc_data[1][8] = data[1];
+	nfc_data[1][9] = data[2];
+	nfc_data[1][10] = data[3];
+	nfc_data[1][11] = data[4];
+	nfc_data[1][12] = data[5];
 
+	for(int i=0; i<13; i++)
+	{
+		printf("%c ",nfc_data[1][i]);
+	}
 
 	// Get the temperature threshold from the sector
 	temp1 = data[6] - 48;					// Update the actual location of the higher threshold value character

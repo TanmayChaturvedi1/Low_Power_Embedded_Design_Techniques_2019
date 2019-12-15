@@ -32,7 +32,7 @@ void logInit(void)
 	 * RETARGET_SerialCrLf() ensures each linefeed also includes carriage return.  Without it, the first character is shifted in TeraTerm
 	 */
 	RETARGET_SerialCrLf(true);
-	LOG_INFO("Initialized Logging");
+	//LOG_INFO("INITIALIZED LOGGING");
 }
 
 /**

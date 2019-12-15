@@ -124,29 +124,24 @@ docking_mode get_docking_switch_position()
 
 void GPIO_EVEN_IRQHandler()
 {
-	LOG_INFO("%d",GPIO_IntGetEnabled());
-	GPIO_IntClear(GPIO_IntGetEnabled());
-	LOG_INFO("Entered handler");
-	//GPIO_PinOutSet(gpioPortD,10);
+	uint32_t flags = GPIO_IntGetEnabled();
+	LOG_INFO("flags = %x",flags);
+	GPIO_IntClear(flags);
 	scheduler |= MOTION_DETECTION;
-	//gotInt=1;
 }
 
 void GPIO_ODD_IRQHandler()
 {
-	//LOG_INFO("Entered odd handler");
+	LOG_INFO("Entered odd handler");
 	uint32_t flags = GPIO_IntGetEnabled();
+	LOG_INFO("flags %x",flags);
 	GPIO_IntClear(flags);
-	LOG_INFO("flags= %d", flags);
-	LOG_INFO("Entered handler");
 	if((flags & (1<<5)) == (1<<5))
 	{
-		LOG_INFO("Inside magnetic detection");
 		scheduler |= MAGNETIC_DETECTION;
 	}
 	if((flags & (1<<13)) == (1<<13))
 	{
-	LOG_INFO("Inside switch detection");
 	int pos = get_docking_switch_position();
 		if(pos)
 		{
@@ -159,8 +154,5 @@ void GPIO_ODD_IRQHandler()
 	}
 }
 
-//void gpioCallback1(uint8_t pin)
-//{
-//	LOG_INFO("Entered handler");
-//}
+
 

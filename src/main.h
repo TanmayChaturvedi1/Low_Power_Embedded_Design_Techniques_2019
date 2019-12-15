@@ -13,7 +13,7 @@
 #include "log.h"
 #include "si7021.h"
 
-#define sleepEM (1) 		/*Energy mode you want to sleep in. i.e. if EM = 2 then, EM3,EM4 will be blocked.*/
+#define sleepEM (2) 		/*Energy mode you want to sleep in. i.e. if EM = 2 then, EM3,EM4 will be blocked.*/
 #define LED_PERIOD (3)		/*Total LED period in seconds*/
 #define LED_ONTIME (.175)	/*LED on time in seconds*/
 #define LFX0_FREQ (32768)	/*Low frequency crystal oscillator frequency*/

@@ -32,7 +32,7 @@ void letimer_init()
 	//prescale_set();
 
 	LETIMER_Init(LETIMER0,&init);
-	LETIMER_CompareSet(LETIMER0,0,1000);
+	LETIMER_CompareSet(LETIMER0,0,10000);
 	LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF ); /*Enable Underflow interrupts*/
 
 	//NVIC_EnableIRQ(LETIMER0_IRQn);
