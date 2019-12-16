@@ -1,11 +1,8 @@
 /*
- * spi_routines.c
- *
- *  Created on: Nov 26, 2019
- *      Author: TanmayC
- *
- *  BME280 Sensor data parsing APIs referred from:
- *  www.github.com/BoschSensortec/BME280_driver
+ * @filename 	: spi_routines.c
+ * @description	: contains SPI initialization and data acquisition routines
+ * @author		: Tanmay Chaturvedi, Puneet Bansal, and Nachiket Kelkar
+ * @References  : BME280 Sensor data parsing APIs referred from www.github.com/BoschSensortec/BME280_driver
  */
 
 #include "spi_routines.h"
@@ -92,12 +89,6 @@ void BME280_SPI_deinit( void )
   GPIO_PinModeSet( BME280_SPI_CS_PORT,   BME280_SPI_CS_PIN,   gpioModeDisabled, 1);
 }
 
-/*
- * Function:       CS_Low, CS_High
- * Arguments:      None.
- * Description:    Chip select go low / high.
- * Return Message: None.
- */
 void BME280_CS_Low()
 {
    GPIO_PinOutClear( BME280_SPI_CS_PORT, BME280_SPI_CS_PIN );
@@ -108,12 +99,6 @@ void BME280_CS_High()
    GPIO_PinOutSet( BME280_SPI_CS_PORT, BME280_SPI_CS_PIN );
 }
 
-/*
- * Function:       InsertDummyCycle
- * Arguments:      dummy_cycle, number of dummy clock cycle
- * Description:    Insert dummy cycle of SCLK
- * Return Message: None.
- */
 void BME280_InsertDummyCycle( uint8_t dummy_cycle )
 {
    int i;
@@ -124,22 +109,6 @@ void BME280_InsertDummyCycle( uint8_t dummy_cycle )
    }
 }
 
-/*
- * Function:       SendByte
- * Arguments:      byte_value, data transfer to flash
- *                 transfer_type, select different type of I/O mode.
- *                 Seven mode:
- *                 SIO, single IO
- *                 DIO, dual IO
- *                 QIO, quad IO
- *                 PIO, parallel
- *                 DTSIO, double transfer rate SIO
- *                 DTDIO, double transfer rate DIO
- *                 DTQIO, double transfer rate QIO
- *                 INTERRUPT, Uses USART_Tx() and USART_Rx()
- * Description:    Send one byte data to flash
- * Return Message: None.
- */
 void BME280_SendByte( uint8_t byte_value, uint8_t transfer_type )
 {
    switch( transfer_type )
@@ -155,21 +124,6 @@ void BME280_SendByte( uint8_t byte_value, uint8_t transfer_type )
    }
 }
 
-/*
- * Function:       GetByte
- * Arguments:      byte_value, data receive from flash
- *                 transfer_type, select different type of I/O mode.
- *                 Seven mode:
- *                 SIO, single IO
- *                 DIO, dual IO
- *                 QIO, quad IO
- *                 PIO, parallel IO
- *                 DTSIO, double transfer rate SIO
- *                 DTDIO, double transfer rate DIO
- *                 DTQIO, double transfer rate QIO
- * Description:    Get one byte data to flash
- * Return Message: 8 bit data
- */
 uint8_t BME280_GetByte( uint8_t transfer_type )
 {
    uint8_t data_buf = 0;
@@ -177,7 +131,6 @@ uint8_t BME280_GetByte( uint8_t transfer_type )
    switch( transfer_type )
    {
    case SIO: // Single I/O
-      //--- insert your code here for single IO receive. ---//
       data_buf = USART_SpiTransfer( BME280_USART, 0xFF );
       break;
    case INTERRUPT:
@@ -366,7 +319,6 @@ void USART1_RX_IRQHandler(void)
 }
 
 
-// API to get sensor event info based on temperature and humidity threshold
 sensor_return_status get_temp_pres_humidity(int32_t temp_threshold, int32_t humid_threshold)
 {
 	int32_t temperature;
@@ -380,10 +332,7 @@ sensor_return_status get_temp_pres_humidity(int32_t temp_threshold, int32_t humi
 	pressure = comp_data.pressure;
 	humidity = comp_data.humidity;
 	LOG_INFO("Temperature Value = %ld, Pressure Value = %ld, Humidity Value = %ld",comp_data.temperature,comp_data.pressure,comp_data.humidity);
-//	pressure = comp_data.pressure;
-//	LOG_INFO("Pressure Value = %ld",comp_data.pressure);
-//	humidity = comp_data.humidity;
-//	LOG_INFO("Humidity Value = %ld",comp_data.humidity);
+
 
 	if ( temperature >= temp_threshold && humidity >= humid_threshold )
 		return EVENT_TEMP_HUMID_HIGH;

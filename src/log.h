@@ -1,9 +1,10 @@
 /*
- * log.h
- *
- *  Created on: Dec 18, 2018
- *      Author: Dan Walkes
+ * @filename 	: log.h
+ * @description	: contains headers to support log.c.
+ * @author		: Puneet Bansal, Nachiket Kelkar and Tanmay Chaturvedi
+ * @reference   : Referenced from code developed by Dan Walkes for IoT Embedded Firmware.
  */
+
 
 #ifndef SRC_LOG_H_
 #define SRC_LOG_H_

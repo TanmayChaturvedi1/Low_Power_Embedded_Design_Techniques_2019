@@ -1,9 +1,10 @@
 /*
- * log.c
- *
- *  Created on: Dec 18, 2018
- *      Author: Dan Walkes
+ * @filename 	: log.c
+ * @description	: contains functions to enable logging.
+ * @author		: Puneet Bansal, Nachiket Kelkar and Tanmay Chaturvedi
+ * @reference   : Referenced from code developed by Dan Walkes for IoT Embedded Firmware.
  */
+
 
 #include "retargetserial.h"
 #include "log.h"

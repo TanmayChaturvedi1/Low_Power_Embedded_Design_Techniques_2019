@@ -1,7 +1,9 @@
 /*
  * @filename 	: i2c.h
  * @description	: contains headers to support i2c.c
- * @author		: Puneet Bansal
+ * @author		: Puneet Bansal, Nachiket Kelkar and Tanmay Chaturvedi
+ * @reference	: Silicon Labs SDK -https://siliconlabs.github.io/Gecko_SDK_Doc/efr32bg13/html/index.html
+ *                Assignments developed for the course IoT Embedded Firmware.
  */
 
 #include <i2cspm.h>
@@ -10,13 +12,56 @@
 #include "em_cmu.h"
 #include <em_i2c.h>
 
-
+/***************************************************************************************
+ * Function name: i2c_init()                                                 	       *
+ * Description: Function initializes i2c0 for communication with the FCOX8700CQ sensor *
+ * @param: void                                                                        *
+ * @return: void                                                                       *
+ ***************************************************************************************/
 void i2c_init();
-void i2c_transfer();
+
+/***************************************************************************************
+ * Function name: i2c_write()                                                 	       *
+ * Description: Function enables write to a i2c slave.Writing the slave address, mode  *
+ * 				to hold master mode, length to 1 byte. If the transfer is not complete *
+ * 				then logged the error.							   					   *
+ * @param: I2C_TransferSeq_TypeDef                                                     *
+ * @return: void                                                                       *
+ ***************************************************************************************/
+
 void i2c_write(I2C_TransferSeq_TypeDef);
+
+/***************************************************************************************
+ * Function name: i2c_read()                                                 	       *
+ * Description: Function enables read from a i2c slave								   *
+ * @param: I2C_TransferSeq_TypeDef                                                     *
+ * @return: void                                                                       *
+ ***************************************************************************************/
 uint16_t i2c_read(I2C_TransferSeq_TypeDef);
+
+/*****************************************************************************************************
+ * Function name: i2c_write_read()                                                 	                 *
+ * Description: Function enables reading from a register in i2c slave using the flag I2C_WRITE_READ	 *							   *
+ * @param: register address to read from, number of bytes to read                                    *                     *
+ * @return: 16 bit register value                                                                    *
+ *****************************************************************************************************/
 uint16_t i2c_write_read(uint8_t, uint8_t len);
+
+/*****************************************************************************************************
+ * Function name: i2c_write_write()                                                 	             *
+ * Description: Function enables writing to register in i2c slave using the flag I2C_WRITE_WRITE	 *							   *
+ * @param: register address to read from, number of bytes to read                                    *                       *
+ * @return: 16 bit register value                                                                    *
+ *****************************************************************************************************/
+
 void i2c_write_write(uint16_t , uint16_t);
+
+/************************************************************************************************************
+ * Function name: i2c_write_new()                                                 	                        *
+ * Description: Function enables writing multiple bytes to a register in i2c slave using the flag I2C_WRITE	* 	 *							   *
+ * @param: register address to read from, number of bytes to read                                           *                              *
+ * @return: 16 bit register value                                                                           *
+ ************************************************************************************************************/
 void i2c_write_new(uint8_t,uint8_t);
 
 #define GEEKY_PANDA_I2C 1
@@ -26,21 +71,19 @@ void i2c_write_new(uint8_t,uint8_t);
 	#define SCL_PIN 7
 	#define SDA_PORT gpioPortF
 	#define SDA_PIN 6
-	#define NO_HOLD_MASTER_TEMP 0x0d//0XE3;
-	#define ACC_SLAVE_ADD 0X1E //sa0 sa1 00;
+	#define NO_HOLD_MASTER_TEMP 0x0D
+	#define ACC_SLAVE_ADD 0X1E
 
 #else
 	#define ACC_SLAVE_ADD 0X1F
 #endif
 #define SLAVE_ADD 0x40
 
-#define NO_HOLD_MASTER_TEMP 0x0d//0XE3;
+#define NO_HOLD_MASTER_TEMP 0x0D
+
 #define WHO_AM_I_ACC 0X0D
 #define NFC_SLAVE_ADD 0X55
 uint16_t data,len;
-
-
-
 
 
 /* The functions required to communicate with the NFC module */
@@ -164,24 +207,6 @@ void nfc_i2c_write_data_spm(uint8_t, uint8_t, uint8_t*);
  ********************************************************************************/
 void nfc_i2c_write_data_to_nfc(uint8_t address, uint8_t max_sectors);
 
-
-///*********************************************************************************
-// * Function name: set_temperature_threshold()                                    *
-// * Description: Function returns the temperature threshold.                      *
-// * @param: 	uint8_t (address)   		- The slave address of the NFC module.   *
-// * @return: uint8_t 					- The temperature threshold.             *
-// ********************************************************************************/
-//uint8_t set_temperature_threshold(uint8_t address);
-//
-//
-///*********************************************************************************
-// * Function name: set_humidity_threshold()                                       *
-// * Description: Function returns the temperature threshold.                      *
-// * @param: 	uint8_t (address)   		- The slave address of the NFC module.   *
-// * @return: uint8_t 					- The humidity threshold.                *
-// ********************************************************************************/
-//uint8_t set_humidity_threshold(uint8_t address);
-//
 
 /*********************************************************************************
  * Function name: nfc_get_all_the_written_values()                               *

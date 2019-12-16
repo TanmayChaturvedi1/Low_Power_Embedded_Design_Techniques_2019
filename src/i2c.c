@@ -1,21 +1,13 @@
 /*
  * @filename	: i2c.c
  * @description	: This file contains functions to configure I2C peripheral.
- * @author 		: Puneet Bansal
+ * @author 		: Puneet Bansal, Nachiket Kelkar, Tanmay Chaturvedi.
  * @reference	: Silicon Labs SDK -https://siliconlabs.github.io/Gecko_SDK_Doc/efr32bg13/html/index.html
- *
+ *                Assignments developed for the course IoT Embedded Firmware.
  */
 #include "i2c.h"
 #include "main.h"
 
-
-
-/*
- * @decription
- * initialise i2c module with default settings
- * Set the approriate SCL and SDA port ,pin and alternate function number
- *
- */
 void i2c_init()
 {
 	I2CSPM_Init_TypeDef init1 = I2CSPM_INIT_DEFAULT;
@@ -31,16 +23,6 @@ void i2c_init()
 
 	I2CSPM_Init(&init1);
 }
-
-/*
- * @description
- * function to perform write to slave.
- * writing the slave address, mode to hold master mode, length to 1 byte.
- * if the transfer is not complete then logged the error.
- *
- * @param: init
- * instance of TransferSeq_TypeDef passed from temp_get() in si7021.c
- */
 
 void i2c_write(I2C_TransferSeq_TypeDef init)
 {
@@ -58,16 +40,6 @@ void i2c_write(I2C_TransferSeq_TypeDef init)
 	}
 }
 
-/*
- * @description:
- * function to read temperature from slave. Set received_data to point to buf[0].data buffer.
- * calculated the 12bit temperature value from the received_data.
- * received_data[0] consists MSB, received_data[1] consists LSB
- *
- * @param: init
- * instance of TransferSeq_TypeDef passed from temp_get() in si7021.c
- *
- */
 uint16_t i2c_read(I2C_TransferSeq_TypeDef init)
 {
 	I2C_TransferReturn_TypeDef ret;
@@ -109,22 +81,12 @@ uint16_t i2c_write_read(uint8_t regToRead, uint8_t len)
 	write_read_init.buf[1].len=len;//sizeof(received_data);
 	write_read_init.flags= I2C_FLAG_WRITE_READ;
 
-	//received_data=*(init.buf[0].data);
 	ret=I2CSPM_Transfer(I2C0,&write_read_init);
 	if(ret != i2cTransferDone)
 		{
 			LOG_ERROR("I2C Error");
-			//GPIO_PinOutSet(gpioPortD,10);
-			//GPIO_PinOutSet(gpioPortA,1);
-			//GPIO_PinOutSet(gpioPortD,10);
 		}
-
-	//LOG_INFO("bufer[0] is %x",received_data[0]);
-	//LOG_INFO("bufer[1] is %x",received_data[1]);
-	//LOG_INFO("value is %x",((int16_t)received_data[0]<<8) | (received_data[1]));
 	return received_data[0];
-
-
 }
 
 I2C_TransferSeq_TypeDef write_write_init;
@@ -147,8 +109,6 @@ void i2c_write_write(uint16_t regName, uint16_t data)
 	if(ret == i2cTransferNack)
 	{
 		LOG_ERROR("I2C Write error");
-		//GPIO_PinOutSet(gpioPortD,10);
-
 		return;
 	}
 }
@@ -173,15 +133,10 @@ void i2c_write_new(uint8_t writeRegister , uint8_t val)
 	if(ret != i2cTransferDone)
 	{
 		LOG_ERROR("I2C Write error");
-		//GPIO_PinOutSet(gpioPortD,10);
 		return;
 	}
 
-
-	//uint8_t command=WHO_AM_I_ACC;	/*Get temperature, use hold master mode*/
-
 }
-
 
 uint8_t i2c_data[16]={5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5};
 uint16_t i2c_length;
@@ -261,33 +216,6 @@ void nfc_i2c_write_data_to_nfc(uint8_t address, uint8_t max_sectors)
 	}
 }
 
-//
-//uint8_t set_temperature_threshold(uint8_t address)
-//{
-//	uint8_t temperature_threshold;
-//	uint8_t temp1, temp2;
-//	uint8_t* data;
-//	//Get the data from the NFC EEPROM and convert the character value to integer and return it.
-//	data = nfc_i2c_read_data_spm(address, 0x02);
-//	temp1 = data[10] - 48;					// Update the actual location of the higher threshold value character
-//	temp2 = data[11] - 48;					// Update the actual location of the lower threshold value character
-//	temperature_threshold = ((temp1 * 10) + temp2);
-//	return temperature_threshold;
-//}
-//
-//
-//uint8_t set_humidity_threshold(uint8_t address)
-//{
-//	uint8_t humidity_threshold;
-//	uint8_t temp1, temp2;
-//	uint8_t* data;
-//	//Get the data from the NFC EEPROM and convert the character value to integer and return it.
-//	data = nfc_i2c_read_data_spm(address, 0x02);
-//	temp1 = data[12] - 48;				// Update the actual location of the higher threshold value character
-//	temp2 = data[13] - 48;				// Update the actual location of the lower threshold value character
-//	humidity_threshold = ((temp1 * 10) + temp2);
-//	return humidity_threshold;
-//}
 
 
 void nfc_get_all_the_written_values(uint8_t address, uint8_t* temperature_th, uint8_t* humidity_th)

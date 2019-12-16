@@ -1,9 +1,11 @@
 /*
  * @filename	: main.c
- * @description	: Enabling I2C communication between Si7021 and Blue gecko  to obtain temperature readings.
- * @author 		: Puneet Bansal & Nachiket Kelkar & Tanmay Chaturvedi
+ * @description	: Configuring system state machines to operate in Docking source,docking destination and transit mode.
+ * 				  Performing i2c, spi, nfc and sensor intializations.
+ * @author 		: Puneet Bansal , Nachiket Kelkar , Tanmay Chaturvedi
  * @Reference	: Silicon Labs SDK : https://siliconlabs.github.io/Gecko_SDK_Doc/efr32bg13/html/index.html
  * 				  Reference Manual : https://www.silabs.com/documents/login/reference-manuals/bluetooth-le-and-mesh-software-api-reference-manual.pdf
+ *				  Assignments developed for the course IoT Embedded Firmware.
  */
 
 
@@ -85,12 +87,14 @@ int main(void)
 	//clock initialisations for letimer
 	clock_init();
 
+	//gpio pin initialisations
 	gpioInit();
 
 	GPIO_IntClear(0xffff);
 
 	logInit();
 	LOG_INFO("ASSET HEALTH ASSESSMENT AND TRACKING");
+
 	/*Global variable initializations*/
 	timer_expired = false;
 	motion_debounce_flag= 1;
@@ -107,9 +111,9 @@ int main(void)
 	humidThreshold =0;
 	systemState = SYSTEM_DOC_SRC;
 	prevState = SYSTEM_DOC_SRC;
-
 	LOG_INFO("Basic Initializations Complete");
 
+	/*Configuring sleep modes. The mode you want the system to sleep in can be changeg from main.h*/
 	if(sleepEM>0 && sleepEM<3) 			//Check if desired energy mode is 1,2
 		SLEEP_SleepBlockBegin(sleepEM+1);
 
@@ -138,68 +142,67 @@ int main(void)
 		 * humidity and temperature threshold from NFC. */
 		case(SYSTEM_DOC_SRC):
 
-						if(dock_button_status == BUTTON_DOCK)
-						{
-							//LOG_INFO();
-							LOG_INFO("********** STATE : DOCKING SOURCE, SWITCH : DOCK **********");
-							dockingMode_initialisations();
-							/*Function to fetch the temperature and humidity threshold from NFC*/
-							//NFC_on(1);
-							nfc_get_all_the_written_values(NFC_SLAVE_ADD,&tempThreshold, &humidThreshold);
-							//NFC_on(0);
-							LOG_INFO("Temperature Threshold is= %d, Humidity Threshold is = %d", tempThreshold,humidThreshold);
-							systemState = SYSTEM_TRANSIT;
-							prevState =	SYSTEM_DOC_SRC;
-							dock_button_status = BUTTON_NONE;
-						}
-						else
-						{
-							if(printOnce == 1)
-							{
-								LOG_INFO("Change the switch to Dock Mode");
-								printOnce = 0;
-							}
+								if(dock_button_status == BUTTON_DOCK)
+								{
+									//LOG_INFO();
+									LOG_INFO("********** STATE : DOCKING SOURCE, SWITCH : DOCK **********");
+									dockingMode_initialisations();
+									/*Function to fetch the temperature and humidity threshold from NFC*/
+									//NFC_on(1);
+									nfc_get_all_the_written_values(NFC_SLAVE_ADD,&tempThreshold, &humidThreshold);
+									//NFC_on(0);
+									LOG_INFO("Temperature Threshold is= %d, Humidity Threshold is = %d", tempThreshold,humidThreshold);
+									systemState = SYSTEM_TRANSIT;
+									prevState =	SYSTEM_DOC_SRC;
+									dock_button_status = BUTTON_NONE;
+								}
+								else
+								{
+									if(printOnce == 1)
+									{
+										LOG_INFO("Change the switch to Dock Mode");
+										printOnce = 0;
+									}
 
-						}
+								}
 		break;
-
+		/*The mode which is enabled when the package is in transit. Achieved by changing the dock-switch to transit
+		position. All communication interfaces initialised. All sensors intialised.*/
 		case(SYSTEM_TRANSIT):
-					  /*The mode which is enabled when the package is in transit. Achieved by changing the dock-switch
-					   * position*/
-						if(((prevState == SYSTEM_DOC_SRC)| (prevState == SYSTEM_TRANSIT)) && (dock_button_status == BUTTON_TRANSIT))
-						{
-							if(transit_initialisations == 1)
-							{
-								//LOG_INFO();
-								LOG_INFO("********** STATE : TRANSIT, SWITCH : TRANSIT **********");
-								transitMode_initialisations();
-								LOG_INFO("BME 280 Initialised, Motion and Magnetic Detection Enabled");
-								interrupt_enable();
-								LOG_INFO("All interrupts enabled");
-								transit_initialisations = 0;
-							}
-							task_scheduler();
-							prevState = SYSTEM_TRANSIT;
-							systemState = SYSTEM_TRANSIT;
-							//SLEEP_Sleep();
-						}
 
-						else if(prevState == SYSTEM_DOC_SRC && dock_button_status == BUTTON_NONE)
-						{
-							systemState = SYSTEM_TRANSIT;
-						}
-						else if(prevState == SYSTEM_TRANSIT && dock_button_status == BUTTON_DOCK)
-						{
-							dock_button_status = BUTTON_NONE;
-							systemState = SYSTEM_DOC_DESTN;
-						}
+								if(((prevState == SYSTEM_DOC_SRC)| (prevState == SYSTEM_TRANSIT)) && (dock_button_status == BUTTON_TRANSIT))
+								{
+									if(transit_initialisations == 1)
+									{
+										//LOG_INFO();
+										LOG_INFO("********** STATE : TRANSIT, SWITCH : TRANSIT **********");
+										transitMode_initialisations();
+										LOG_INFO("BME 280 Initialised, Motion and Magnetic Detection Enabled");
+										interrupt_enable();
+										LOG_INFO("All interrupts enabled");
+										transit_initialisations = 0;
+									}
+									task_scheduler();
+
+									prevState = SYSTEM_TRANSIT;
+									systemState = SYSTEM_TRANSIT;
+									//SLEEP_Sleep();
+								}
+
+								else if(prevState == SYSTEM_DOC_SRC && dock_button_status == BUTTON_NONE)
+								{
+									systemState = SYSTEM_TRANSIT;
+								}
+								else if(prevState == SYSTEM_TRANSIT && dock_button_status == BUTTON_DOCK)
+								{
+									dock_button_status = BUTTON_NONE;
+									systemState = SYSTEM_DOC_DESTN;
+								}
 
 		break;
-
+		/*Final stage of the system. Interrupts disabled and only NFC i2c is enabled. Transfers the
+		 * data stored during the transit to the NFC EEPROM from where the data can be read on the Android Application.*/
 		case(SYSTEM_DOC_DESTN):
-		//LOG_INFO();
-		//NFC_on(1);
-		//timerWaitUs(10000);
 		LOG_INFO("********** STATE : DOCKING DESTINATION, SWITCH : DOCK **********");
 		interrupt_disable();
 		LOG_INFO("All interrupts disabled");
@@ -212,7 +215,7 @@ int main(void)
 		LOG_INFO("POWER CYCLE TO USE THE SYSTEM AGAIN ");
 		prevState = SYSTEM_DOC_DESTN;
 		systemState = SYSTEM_TRANSIT;
-		//NFC_on(0);
+		//SLEEP_Sleep();
 		break;
 
 		}
@@ -221,14 +224,13 @@ int main(void)
 
 }//ending main
 
+
+
 void task_scheduler()
 {
 	if((scheduler & TIMESTAMP_1SEC) == TIMESTAMP_1SEC)
 	{
-		//LOG_INFO("1 second passed");
-		//second_count++;
 		timestamp_var = timestamp_var + 10;
-		//if(second_count%10 == 0)
 		{
 			return_status = get_temp_pres_humidity(tempThreshold, humidThreshold);
 			if((return_status == EVENT_TEMP_HIGH) || (return_status == EVENT_HUMID_HIGH) || (return_status == EVENT_TEMP_HUMID_HIGH))
@@ -263,11 +265,7 @@ void task_scheduler()
 	{
 		{
 			GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, false );
-			//uint8_t source1 = i2c_write_read(0X0C,1);
 			uint8_t source = i2c_write_read(0X53,1);
-			//LOG_INFO("Source of interrupt is %x", source);
-			//GPIO_PinOutSet(gpioPortD,10);
-			//if((source & 0x04) ==0x04)
 			{
 				LOG_INFO("MAGNETIC FIELD DETECTED");
 				nfc_data_update(timestamp_var,EVENT_MAGNETIC_FIELD_DETECTED);

@@ -1,8 +1,10 @@
 /*
- * nfc_data.c
- *
- *  Created on: Dec 3, 2019
- *      Author: nachi
+ * @filename	: nfc_data.c
+ * @description	: This file contains functions to configure NFC peripheral
+ * 				  and data structure to write the data to the NFC.
+ * @author 		: Nachiket Kelkar, Puneet Bansal, Tanmay Chaturvedi.
+ * @reference	: Silicon Labs SDK -https://siliconlabs.github.io/Gecko_SDK_Doc/efr32bg13/html/index.html
+ *                Assignments developed for the course IoT Embedded Firmware.
  */
 
 #include "nfc_data.h"
@@ -129,6 +131,7 @@ uint8_t nfc_data[117][16] = {{0x03, 0xFF, 0x00, 0x3C, 0xC1, 0x01, 0, 0, 0x00, 0x
 							{'1', '1', '7', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '\n'}
 	};
 
+
 void nfc_data_update(uint32_t time_variable, uint8_t event)
 {
 	static int section = 0;
@@ -179,11 +182,13 @@ void nfc_data_update(uint32_t time_variable, uint8_t event)
 	}
 }
 
+
 void update_header(uint8_t sector, uint8_t section)
 {
 	static uint16_t header = 0x001C;
 	static uint16_t payload = 0x0015;
 
+	/* Update the header to write to the data structure */
 	header += 8;
 	payload = header - 7;
 

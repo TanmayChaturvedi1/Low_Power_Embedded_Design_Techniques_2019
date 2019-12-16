@@ -1,19 +1,14 @@
 /*
  * @filename	: cmu.c
- * @description	: This file contains functions to configure Clocks
- * @author 		: Puneet Bansal
+ * @description	: This file contains functions to configure clocks.
+ * @author 		: Puneet Bansal, Tanmay Chaturvedi, Nachiket Kelkar
+ * @references  : Silicon Labs SDK -https://siliconlabs.github.io/Gecko_SDK_Doc/efr32bg13/html/index.html
  *
  */
 
 #include "cmu.h"
 #include "main.h"
 
-/*
- * @description
- * For EM0,EM1 & EM2 selected LFX0 oscillator and for EM3 selected the ULFRCO
- * Selected LFA clock branch.
- * Enabled LETIMER0 and LFA clocks.
- */
 void clock_init()
 {
 	if(sleepEM>=0 && sleepEM<3)
@@ -27,7 +22,5 @@ void clock_init()
 	}
 
 	CMU_ClockEnable(cmuClock_LFA, true);
-	//CMU_ClockDivSet(cmuClock_LETIMER0, 4);
-
 	CMU_ClockEnable(cmuClock_LETIMER0,true);
 }
