@@ -148,9 +148,7 @@ int main(void)
 									LOG_INFO("********** STATE : DOCKING SOURCE, SWITCH : DOCK **********");
 									dockingMode_initialisations();
 									/*Function to fetch the temperature and humidity threshold from NFC*/
-									//NFC_on(1);
 									nfc_get_all_the_written_values(NFC_SLAVE_ADD,&tempThreshold, &humidThreshold);
-									//NFC_on(0);
 									LOG_INFO("Temperature Threshold is= %d, Humidity Threshold is = %d", tempThreshold,humidThreshold);
 									systemState = SYSTEM_TRANSIT;
 									prevState =	SYSTEM_DOC_SRC;
@@ -186,7 +184,7 @@ int main(void)
 
 									prevState = SYSTEM_TRANSIT;
 									systemState = SYSTEM_TRANSIT;
-									//SLEEP_Sleep();
+									SLEEP_Sleep();
 								}
 
 								else if(prevState == SYSTEM_DOC_SRC && dock_button_status == BUTTON_NONE)
@@ -215,7 +213,7 @@ int main(void)
 		LOG_INFO("POWER CYCLE TO USE THE SYSTEM AGAIN ");
 		prevState = SYSTEM_DOC_DESTN;
 		systemState = SYSTEM_TRANSIT;
-		//SLEEP_Sleep();
+		SLEEP_Sleep();
 		break;
 
 		}
@@ -231,31 +229,27 @@ void task_scheduler()
 	if((scheduler & TIMESTAMP_1SEC) == TIMESTAMP_1SEC)
 	{
 		timestamp_var = timestamp_var + 10;
+		return_status = get_temp_pres_humidity(tempThreshold, humidThreshold);
+		if((return_status == EVENT_TEMP_HIGH) || (return_status == EVENT_HUMID_HIGH) || (return_status == EVENT_TEMP_HUMID_HIGH))
 		{
-			return_status = get_temp_pres_humidity(tempThreshold, humidThreshold);
-			if((return_status == EVENT_TEMP_HIGH) || (return_status == EVENT_HUMID_HIGH) || (return_status == EVENT_TEMP_HUMID_HIGH))
-			{
-				nfc_data_update(timestamp_var,return_status);
-			}
-			//second_count = 0;
-			GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, true );
-			GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, true );
+			nfc_data_update(timestamp_var,return_status);
 		}
+		GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, true );
+		GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, true );
+
 		scheduler &= ~ TIMESTAMP_1SEC;
 	}
 
 	if((scheduler & MOTION_DETECTION) == MOTION_DETECTION)
 	{
+		GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, false );
+		uint8_t source = i2c_write_read(0X0C,1);
+		if((source & 0x04) ==0x04)
 		{
-			GPIO_ExtIntConfig(MOTION_DETECTION_PORT,MOTION_DETECTION_PIN, MOTION_DETECTION_PIN , false, true, false );
-			uint8_t source = i2c_write_read(0X0C,1);
-			if((source & 0x04) ==0x04)
-			{
-				GPIO_PinOutSet(gpioPortD,10);
-				LOG_INFO("MOTION DETECTED");
-				nfc_data_update(timestamp_var,EVENT_MOTION_DETECTED);
-				uint8_t val = i2c_write_read(0x16,1);
-			}
+			GPIO_PinOutSet(gpioPortD,10);
+			LOG_INFO("MOTION DETECTED");
+			nfc_data_update(timestamp_var,EVENT_MOTION_DETECTED);
+			uint8_t val = i2c_write_read(0x16,1);
 		}
 		scheduler &= ~ MOTION_DETECTION;
 		inside_motion = 0;
@@ -263,21 +257,17 @@ void task_scheduler()
 
 	if((scheduler & MAGNETIC_DETECTION) == MAGNETIC_DETECTION)
 	{
+		GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, false );
+		uint8_t source = i2c_write_read(0X53,1);
 		{
-			GPIO_ExtIntConfig(MAGNETIC_DETECTION_PORT,MAGNETIC_DETECTION_PIN, MAGNETIC_DETECTION_PIN , false, true, false );
-			uint8_t source = i2c_write_read(0X53,1);
-			{
-				LOG_INFO("MAGNETIC FIELD DETECTED");
-				nfc_data_update(timestamp_var,EVENT_MAGNETIC_FIELD_DETECTED);
-
-			}
-			scheduler &= ~ MAGNETIC_DETECTION;
+			LOG_INFO("MAGNETIC FIELD DETECTED");
+			nfc_data_update(timestamp_var,EVENT_MAGNETIC_FIELD_DETECTED);
 		}
-
+		scheduler &= ~ MAGNETIC_DETECTION;
 	}
 
-
 }
+
 void dockingMode_initialisations()
 {
 	nfc_i2c_init();
